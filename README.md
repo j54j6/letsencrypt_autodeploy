@@ -22,7 +22,7 @@ sudo certbot certonly \
     --expand \
     --server https://acme-v02.api.letsencrypt.org/directory \ 
     --agree-tos \
-    --email mail@justinritter.de \
+    --email your@mail.com \
     --deploy-hook '/path/to/the/file.py -domains_path="$RENEWED_LINEAGE" -renewed_domains="$RENEWED_DOMAINS"' \
     -d 'domain.tld' \
     -d '*.domain.tls' 
@@ -45,8 +45,8 @@ In the following is an example Configuration for two example domains
               "*"
             ],
             "target": [
-              "/nfs/priv1/certificates/nodework.de",
-              "/nfs/priv2/certificates/nodework.de"
+              "/path/to/your/targetdir1",
+              "/path/to/your/targetdir2"
             ]
         },
         {

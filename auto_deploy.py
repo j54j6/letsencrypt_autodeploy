@@ -1,11 +1,11 @@
 #!/usr/bin/python3
 #This Script is used to deploy certbot generated certificates to specific directories
+import os
 import os.path
 import logging
 import json
 import argparse, sys
 import shutil
-from urllib.parse import urlparse
 
 
 #Check if a given file exist - if not return false
@@ -42,7 +42,7 @@ def load_config(path):
         except:
             logging.error("Error while loading the config!")
 
-#for correct handling the domain of the certificate deploy hook is spliced in its dissolved form. 
+#for correct handling the domain of the certificate deploy hook is spliced in its dissolved form.
 #These Data will be returned and from there on these data will be used to match all needed rules
 def format_domain(certificate_domain):
     try:
@@ -54,13 +54,13 @@ def format_domain(certificate_domain):
             print("Len is: " + len(domain_parts))
             logging.warning("There are not enough parts to form a valid certificate useable domain!")
             return False
-        
+
         domain_tld = domain_parts[len(domain_parts)-1]
         domain_name = domain_parts[len(domain_parts)-2]
 
         #all subdomain levels are stored here
         sub_domain = []
-
+        
         if(len(domain_parts) > 2):
             del domain_parts[-2:]
             for domain_part in reversed(domain_parts):
@@ -74,7 +74,7 @@ def format_domain(certificate_domain):
         domain_data["domain_second_level"] = domain_name
         if(domain_has_third_level):
             domain_data["domain_sub_level"] = sub_domain[::-1][0]
-           
+
         else:
             domain_data["domain_sub_level"] = False
 
@@ -120,8 +120,6 @@ def is_rule_matching(rule, domain_data):
     except:
         logger.error("Error while deciding rule!")
         return False
-
-
 def get_targets(domain_data):
     try:
         #config
@@ -156,24 +154,27 @@ def deploy_file(targets, src):
                 src = os.path.abspath(src)
             if not os.path.isabs(target):
                 target = os.path.abspath(target)
-            
+
             #remove and \ cause it makes problems...
             if "\\" in target:
                 target = str(target).replace("\\", "/")
             if "\\" in src:
                 src = str(src).replace("\\", "/")
+            if not os.path.exists(target):
+                logging.info("Target directory does not exist - create...")
+                os.mkdir(target, 777)
+
             if os.path.exists(target):
                 if os.path.exists(src):
-                    print("Src: " + str(src))
-                    print("Dst: " + str(target))
                     shutil.rmtree(target)
-                    shutil.copytree(src, target, True)
+                    shutil.copytree(src, target, False)
                 else:
                     logging.error("Cant find src (Certificates) from letsencrypt! - Provided Path: " + str(src))
             else:
-                logging.error("Cant find destination! - Provided Path: " + str(target))
+                logging.error("Cant find destination! - try to create - Provided Path: " + str(target))
     except Exception as e:
         logging.error("Error while deploying Certificates! - SRC: " + str(src) + str(", Targets: ") + str(targets) + " E_MESSAGE: " + str(e))
+
 
 
 #MAIN
@@ -182,9 +183,6 @@ parser=argparse.ArgumentParser(
     description="This program is used to deploy multiple certificates based on a json config"
 )
 parser.add_argument("-config", help="Config File with all domains and targets (default=./config.json)", default="./config.json", required=False)
-parser.add_argument("-domains_path", help="Path to the new generated certificates Certbot ENV var => (\"$RENEWED_LINEAGE\")",required=True)
-parser.add_argument("-renewed_domains", help="List of renewed Domains for the given certificate (deploy hook) Certbot ENV Var =>(\"$RENEWED_DOMAINS\")", required=True)
-
 
 args=parser.parse_args()
 
@@ -196,19 +194,32 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)-8s %(m
 #Check if config File exist and is valid JSON
 config = load_config(args.config)
 
+logger.debug("-------------")
+logger.debug(os.environ)
+logger.debug("Var: ")
+logger.debug(os.environ.get('RENEWED_LINEAGE'))
+logger.debug("Var 2: ")
+logger.debug(os.environ.get('RENEWED_DOMAINS'))
+
 if not config:
     logging.error("Stop Script - Error while loading config!")
     exit(-1)
 else:
     logging.debug("Config successfully loaded")
-    logging.debug("Provided Data from Certbot: Domains Renewed: " + str(args.renewed_domains) + str(", Folder: " + str(args.domains_path)))
+    logging.debug("Provided Data from Certbot: Domains Renewed: " + str(os.environ.get('RENEWED_DOMAINS')) + str(", Folder: " + str(os.environ.get('RENEWED_LINEAGE'))))
     #check for domains path (check if this folder exist)
-    if(not os.path.exists(args.domains_path)):
-        logging.error("Can't find renewed domains certificate folder! - Provided Folder: " + str(args.domains_path))
+    try:
+        path_exist = os.path.exists(os.environ.get('RENEWED_LINEAGE'))
+    except:
+        logging.error("No env. var found!")
+        exit()
+    
+    if(not path_exist):
+        logging.error("Can't find renewed domains certificate folder! - Provided Folder: " + str(os.environ.get('RENEWED_LINEAGE')))
         exit(-1)
     else:
-        certs_path = args.domains_path
-        domains = args.renewed_domains
+        certs_path = os.environ.get('RENEWED_LINEAGE')
+        domains = os.environ.get('RENEWED_DOMAINS')
         domains = domains.split()
         #config
         #format_domain(domains[1])

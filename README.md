@@ -8,7 +8,10 @@ This little program can be used to automate the deployment of different certific
 
 ## Useage
 
-Copy this repository to your certificate Server or deployment point.
+Copy this repository to your certificate Server or deployment point and paste the script with symlink in "/etc/letsencrypt/renewal-hooks/deploy/". Example command: ln -s /opt/auto_deploy.py /etc/letsencrypt/renewal-hooks/deploy/auto_deploy.py 
+
+Create a config like given in the example and create your signing request.
+
 Only Python3 is required. This Script is used as "deploy-hook" Script. In the following is an example Script used by me.
 
 
@@ -23,7 +26,6 @@ sudo certbot certonly \
     --server https://acme-v02.api.letsencrypt.org/directory \ 
     --agree-tos \
     --email your@mail.com \
-    --deploy-hook '/path/to/the/file.py -domains_path="$RENEWED_LINEAGE" -renewed_domains="$RENEWED_DOMAINS"' \
     -d 'domain.tld' \
     -d '*.domain.tls' 
 ```
@@ -81,7 +83,6 @@ In the following is an example Configuration for two example domains
 *wildcard* => The wildcard key is used to cover wildcard certificates (*.domain.tld).
 *base* => The base key is used to cover the bare domain certificate (domain.tld)
 *domains* => In this array you can define all subdomains you want to cover (only one subdomain is currently supported if you need more open an issue and I will ad this feature if needed. - sub.domain.tld => Supported, 2nd.sub.domain.tld => Not working!)
-
 
 
 
